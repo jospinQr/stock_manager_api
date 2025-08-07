@@ -56,7 +56,7 @@ class InvoiceService {
         val logo = Image.getInstance(logoPath)
 
         // Adapter à l'imprimante thermique 80mm
-        logo.scaleAbsoluteWidth(120f)  // ~42mm de large
+        logo.scaleAbsoluteWidth(100f)  // ~42mm de large
         logo.scaleAbsoluteHeight(60f)
         logo.alignment = Element.ALIGN_CENTER
 
@@ -122,7 +122,10 @@ class InvoiceService {
     }
 
     private fun addFooter(document: Document) {
-        val footer = Paragraph("\nMerci pour votre achat!", FONT_NORMAL)
+        val footer = Paragraph(
+            "\nMerci pour votre achat! \n Les marchandises vendus ne sont ni remises ni échangées",
+            FONT_NORMAL
+        )
         footer.alignment = Element.ALIGN_CENTER
         document.add(footer)
     }

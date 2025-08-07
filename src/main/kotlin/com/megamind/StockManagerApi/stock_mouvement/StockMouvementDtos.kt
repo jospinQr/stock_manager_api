@@ -39,5 +39,6 @@ data class StockMovementLineDTO(
     val stockBefore: Int,
     val stockAfter: Int,
     val sourceDocument: String?,
-    val notes: String?
+    val notes: String?,
+    val user :User
 )

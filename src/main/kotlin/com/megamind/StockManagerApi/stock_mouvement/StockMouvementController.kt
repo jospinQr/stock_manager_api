@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_PDF
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/api/v1/stock") // Base path pour les endpoints liés au stock
@@ -42,15 +43,23 @@ class StockController(private val stockService: StockService) {
 
 
     @GetMapping("products/{id}/stock-card")
-    fun getStockCard(@PathVariable id: Long): ResponseEntity<List<StockMovementLineDTO>> {
-        val stockCard = stockService.getStockCard(id)
+    fun getStockCard(
+        @PathVariable id: Long,
+        @RequestParam startDate: LocalDateTime,
+        @RequestParam endDate: LocalDateTime
+    ): ResponseEntity<List<StockMovementLineDTO>> {
+        val stockCard = stockService.getStockCard(id, startDate, endDate)
         return ResponseEntity.ok(stockCard)
     }
 
 
     @GetMapping("products/{id}/stock-card/pdf")
-    fun downloadStockCardPdf(@PathVariable id: Long): ResponseEntity<ByteArray> {
-        val pdfBytes = stockService.generateStockCardPdf(id)
+    fun downloadStockCardPdf(
+        @PathVariable id: Long,
+        @RequestParam startDate: LocalDateTime,
+        @RequestParam endDate: LocalDateTime
+    ): ResponseEntity<ByteArray> {
+        val pdfBytes = stockService.generateStockCardPdf(id, startDate, endDate)
         return ResponseEntity.ok()
             .header("Content-Disposition", "attachment; filename=fiche-stock-produit-$id.pdf")
             .contentType(APPLICATION_PDF)

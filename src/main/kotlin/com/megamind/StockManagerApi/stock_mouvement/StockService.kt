@@ -96,11 +96,12 @@ class StockService(
     }
 
 
-    fun getStockCard(productId: Long): List<StockMovementLineDTO> {
+    fun getStockCard(productId: Long, startDate: LocalDateTime, endDate: LocalDateTime): List<StockMovementLineDTO> {
         val product = productRepository.findById(productId)
             .orElseThrow { EntityNotFoundException("Product with id $productId not found.") }
 
-        val movements = movementRepository.findByProductIdOrderByMovementDateAsc(productId)
+        val movements = movementRepository
+            .findByProductIdAndMovementDateBetweenOrderByMovementDateAsc(productId, startDate, endDate)
 
         var currentStock = 0
         val stockCard = mutableListOf<StockMovementLineDTO>()
@@ -116,7 +117,8 @@ class StockService(
                     stockBefore = before,
                     stockAfter = currentStock,
                     sourceDocument = movement.sourceDocument,
-                    notes = movement.notes
+                    notes = movement.notes,
+                    user = movement.user
                 )
             )
         }
@@ -125,11 +127,11 @@ class StockService(
     }
 
 
-    fun generateStockCardPdf(productId: Long): ByteArray {
+    fun generateStockCardPdf(productId: Long, startDate: LocalDateTime, endDate: LocalDateTime): ByteArray {
         val product = productRepository.findById(productId)
             .orElseThrow { EntityNotFoundException("Product with id $productId not found.") }
 
-        val movements = getStockCard(productId)
+        val movements = getStockCard(productId, startDate, endDate)
 
         val outputStream = ByteArrayOutputStream()
         val document = Document(PageSize.A4, 36f, 36f, 54f, 36f)
@@ -141,8 +143,16 @@ class StockService(
         val normalFont = Font(Font.FontFamily.HELVETICA, 10f)
         val boldFont = Font(Font.FontFamily.HELVETICA, 10f, Font.BOLD)
 
+        val startDate = startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+        val endDate = endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+
         addHeader(document)
-        document.add(Paragraph("Fiche de stock du produit : ${product.name}", titleFont).apply {
+        document.add(Paragraph("Fiche de stock du produit : ${product.name} ", titleFont).apply {
+            alignment = Element.ALIGN_CENTER
+            spacingAfter = 10f
+        })
+
+        document.add(Paragraph("du $startDate au $endDate").apply {
             alignment = Element.ALIGN_CENTER
             spacingAfter = 10f
         })
@@ -155,11 +165,11 @@ class StockService(
         })
 
         // Tableau
-        val table = PdfPTable(7)
+        val table = PdfPTable(8)
         table.widthPercentage = 100f
-        table.setWidths(floatArrayOf(2f, 1.5f, 1f, 1f, 1f, 2f, 3f))
+        table.setWidths(floatArrayOf(2f, 1.5f, 1f, 1f, 1f, 2f, 3f, 2f))
 
-        val headers = listOf("Date", "Type", "Quantité", "Avant", "Après", "Document", "Notes")
+        val headers = listOf("Date", "Type", "Quantité", "Avant", "Après", "Document", "Notes", "Par")
         for (header in headers) {
             val cell = PdfPCell(Phrase(header, boldFont))
             cell.backgroundColor = BaseColor.LIGHT_GRAY
@@ -169,6 +179,18 @@ class StockService(
         }
 
         for (m in movements) {
+            val type = when (m.type) {
+
+                MovementType.SALE,
+                MovementType.SUPPLIER_RETURN,
+                MovementType.INVENTORY_ADJUSTMENT_MINUS,
+                MovementType.WASTAGE -> "Sortie"
+
+
+                MovementType.SUPPLY,
+                MovementType.CUSTOMER_RETURN,
+                MovementType.INVENTORY_ADJUSTMENT_PLUS -> "Entrée"
+            }
             table.addCell(Phrase(m.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), normalFont))
             table.addCell(Phrase(m.type.name, normalFont))
             table.addCell(Phrase(m.quantity.toString(), normalFont))
@@ -176,6 +198,7 @@ class StockService(
             table.addCell(Phrase(m.stockAfter.toString(), normalFont))
             table.addCell(Phrase(m.sourceDocument ?: "", normalFont))
             table.addCell(Phrase(m.notes ?: "", normalFont))
+            table.addCell(Phrase(m.user.username, normalFont))
         }
 
         document.add(table)
