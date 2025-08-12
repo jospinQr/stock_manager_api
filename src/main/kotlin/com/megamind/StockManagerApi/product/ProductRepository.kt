@@ -17,7 +17,7 @@ interface ProductRepository : JpaRepository<Product, Long>, JpaSpecificationExec
     fun findByCategory(category: Category, pageable: Pageable): Page<Product>
 
     // Recherche par nom (insensible à la casse)
-    fun findByNameContainingIgnoreCase(name: String, pageable: Pageable): Page<Product>
+    fun findByNameContainingIgnoreCase(name: String,pageable: Pageable): Page<Product>
 
     // Recherche par code-barres
     fun findByBarcode(barcode: String): Optional<Product>
@@ -29,7 +29,7 @@ interface ProductRepository : JpaRepository<Product, Long>, JpaSpecificationExec
     // **Fonctionnalité métier clé : Trouver les produits en rupture de stock**
     fun findByQuantityInStockEquals(quantity: Int): List<Product>
 
-    // **Fonctionnalité métier clé : Trouver les produits en stock bas**
+
     fun findByNameIgnoreCase(name: String): Optional<Product>
 
 

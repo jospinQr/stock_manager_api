@@ -5,9 +5,15 @@ import com.megamind.StockManagerApi.product.ProductRepository
 import com.megamind.StockManagerApi.stock_mouvement.MovementRequestDTO
 import com.megamind.StockManagerApi.stock_mouvement.MovementType
 import com.megamind.StockManagerApi.stock_mouvement.StockService
+import com.megamind.StockManagerApi.user.User
+import com.megamind.StockManagerApi.user.UserDTO
 import com.megamind.StockManagerApi.user.UserRepository
+import com.megamind.StockManagerApi.utlis.PaginatedResponse
 import jakarta.persistence.EntityNotFoundException
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
+
 import java.time.LocalDateTime
 
 @Service
@@ -90,16 +96,69 @@ class SaleService(
         return sale.toResponseDTO()
     }
 
-    fun listAllSales(): List<SaleResponseDTO> {
+    fun findAll(): List<SaleResponseDTO> {
         return saleRepository.findAll()
             .map { it.toResponseDTO() }
     }
 
+    fun findPaginatedSale(pageable: Pageable): PaginatedResponse<SaleResponseDTO> {
+        val salesPage: Page<SaleResponseDTO> = saleRepository.findAll(pageable).map { it.toResponseDTO() }
+
+        return PaginatedResponse(
+            content = salesPage.content,
+            totalElements = salesPage.totalElements,
+            pageNumber = salesPage.number,
+            pageSize = salesPage.size,
+            totalPages = salesPage.totalPages
+
+
+        )
+    }
+
+
+    fun findByDateBetween(
+        startDate: LocalDateTime,
+        endDate: LocalDateTime,
+        pageable: Pageable
+    ): PaginatedResponse<SaleResponseDTO> {
+        val salesPage = saleRepository.findByDateBetween(startDate, endDate, pageable)
+            .map { it.toResponseDTO() }
+
+        return PaginatedResponse(
+            content = salesPage.content,
+            totalElements = salesPage.totalElements,
+            pageNumber = salesPage.number,
+            pageSize = salesPage.size,
+            totalPages = salesPage.totalPages
+
+
+        )
+
+    }
+
+
+    fun findbyProduct(productId: Long, pageable: Pageable): PaginatedResponse<SaleResponseDTO> {
+
+        val existProduct = productRepository.findById(productId).orElseThrow {
+            EntityNotFoundException()
+        }
+        val salesPage = saleRepository.findByProduct(existProduct, pageable)
+            .map { it.toResponseDTO() }
+        return PaginatedResponse(
+            content = salesPage.content,
+            totalElements = salesPage.totalElements,
+            pageNumber = salesPage.number,
+            pageSize = salesPage.size,
+            totalPages = salesPage.totalPages
+
+
+        )
+    }
 
     private fun Sale.toResponseDTO() = SaleResponseDTO(
         id = this.id,
         date = this.date,
-        customerName = this.customer?.name,
+        customerName = this.customer?.name ?: "",
         items = this.items.map {
             SaleItemDTO(
                 productName = it.product.name,
@@ -110,6 +169,7 @@ class SaleService(
         },
         totalAmount = this.items.sumOf { it.discount.toDouble() },
         paymentStatus = this.paymentStatus,
-        createdBy = this.createdBy
+        createdBy = UserDTO(id = this.createdBy.id, username = this.createdBy.username)
     )
+
 }

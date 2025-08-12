@@ -97,7 +97,7 @@ class StockService(
 
 
     fun getStockCard(productId: Long, startDate: LocalDateTime, endDate: LocalDateTime): List<StockMovementLineDTO> {
-        val product = productRepository.findById(productId)
+        productRepository.findById(productId)
             .orElseThrow { EntityNotFoundException("Product with id $productId not found.") }
 
         val movements = movementRepository

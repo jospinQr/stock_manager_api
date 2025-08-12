@@ -1,5 +1,6 @@
 package com.megamind.StockManagerApi.sale
 
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import com.megamind.StockManagerApi.customer.Customer
 import com.megamind.StockManagerApi.user.User
 import jakarta.persistence.*
@@ -22,6 +23,7 @@ data class Sale(
     val customer: Customer? = null,
 
     @OneToMany(mappedBy = "sale", cascade = [CascadeType.ALL], orphanRemoval = true)
+
     val items: MutableList<SaleItem> = mutableListOf(),
 
     @ManyToOne(fetch = FetchType.LAZY)

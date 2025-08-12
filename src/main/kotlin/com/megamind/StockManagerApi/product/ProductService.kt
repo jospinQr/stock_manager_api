@@ -184,10 +184,18 @@ class ProductService(
 
 
     /**
+     * Touver tous les produits (sans Pagination).
+     */
+
+    fun findAll(): List<ProductResponseDTO> {
+        return productRepository.findAll().map { it.toResponseDTO() }
+    }
+
+    /**
      * Touver tous les produits par categorie(Paginé).
      */
 
-    fun findByCategory(pageable: Pageable, category: Category): Page<ProductResponseDTO> {
+    fun findByCategory(category: Category, pageable: Pageable): Page<ProductResponseDTO> {
         return productRepository.findByCategory(category, pageable).map {
             it.toResponseDTO()
         }

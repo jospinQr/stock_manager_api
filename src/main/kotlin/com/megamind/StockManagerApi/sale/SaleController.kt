@@ -1,7 +1,10 @@
 package com.megamind.StockManagerApi.sale
 
 
+import com.megamind.StockManagerApi.utlis.PaginatedResponse
 import jakarta.validation.Valid
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -9,6 +12,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 import java.net.http.HttpHeaders
 import java.security.Principal
+import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/api/v1/sales") // Utilisation d'un préfixe de versionnage pour l'API
@@ -53,16 +57,57 @@ class SaleController(private val saleService: SaleService, private val invoiceSe
      */
     @GetMapping
     fun getAllSales(): ResponseEntity<List<SaleResponseDTO>> {
-        val sales = saleService.listAllSales()
+        val sales = saleService.findAll()
         return ResponseEntity.ok(sales)
     }
+
+    /**
+     * Récupère les ventes par pages.
+     * @return Une liste de toutes les ventes.
+     */
+    @GetMapping("/all")
+    fun getPaginateSales(pageable: Pageable): ResponseEntity<PaginatedResponse<SaleResponseDTO>> {
+        val sales = saleService.findPaginatedSale(pageable)
+        return ResponseEntity.ok(sales)
+    }
+
+
+    /**
+     * Récupère les ventes par pages selon une quelconque periode.
+     * @return Une liste de toutes les ventes de cette periode.
+     */
+    @GetMapping("/between")
+    fun getByDateBetween(
+        @RequestParam startDate: LocalDateTime,
+        @RequestParam endDate: LocalDateTime,
+        pageable: Pageable
+    ): ResponseEntity<PaginatedResponse<SaleResponseDTO>> {
+
+        val sales = saleService.findByDateBetween(startDate, endDate, pageable)
+        return ResponseEntity.ok(sales)
+    }
+
+
+    /**
+     * Récupère les ventes par pages selon une quelconque produit.
+     * @return Une liste de toutes les ventes de cette periode.
+     */
+    @GetMapping("/products/{productId}")
+    fun getByProduct(
+        @PathVariable productId: Long,
+        pageable: Pageable
+    ): ResponseEntity<PaginatedResponse<SaleResponseDTO>> {
+        val sales = saleService.findbyProduct(productId, pageable)
+        return ResponseEntity.ok(sales)
+    }
+
 
     /**
      * Récupère une vente par son identifiant unique.
      * @param id L'identifiant de la vente.
      * @return La vente correspondante si elle existe, sinon une erreur 404 est gérée par le `ControllerAdvice`.
      */
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     fun getSaleById(@PathVariable id: Long): ResponseEntity<SaleResponseDTO> {
         val sale = saleService.getSaleById(id)
         return ResponseEntity.ok(sale)

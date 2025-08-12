@@ -1,6 +1,7 @@
 package com.megamind.StockManagerApi.sale
 
 import com.megamind.StockManagerApi.user.User
+import com.megamind.StockManagerApi.user.UserDTO
 import jakarta.validation.constraints.NotEmpty
 import java.time.LocalDateTime
 
@@ -15,7 +16,8 @@ data class SaleItemRequestDTO(
 data class SaleRequestDTO(
     val customerId: Long?, // Le client est optionnel
     @field:NotEmpty(message = "La liste des articles ne peut pas être vide.")
-    val items: List<SaleItemRequestDTO>
+    val items: List<SaleItemRequestDTO>,
+
 )
 
 
@@ -26,7 +28,7 @@ data class SaleResponseDTO(
     val items: List<SaleItemDTO>,
     val totalAmount: Double,
     val paymentStatus: PaymentStatus,
-    val createdBy: User
+    val createdBy: UserDTO
 )
 
 data class SaleItemDTO(

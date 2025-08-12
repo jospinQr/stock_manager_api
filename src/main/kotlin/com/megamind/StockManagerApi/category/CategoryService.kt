@@ -20,4 +20,10 @@ class CategoryService(private val repository: CategoryRepository) {
 
     fun findAllCategories(): List<Category> = repository.findAll()
 
+
+    fun findById(id: Long): Category = repository.findById(id).orElseThrow {
+
+        EntityNotFoundException("category don't exist")
+    }
+
 }

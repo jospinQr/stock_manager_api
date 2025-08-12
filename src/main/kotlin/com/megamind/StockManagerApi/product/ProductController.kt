@@ -1,5 +1,6 @@
 package com.megamind.StockManagerApi.product
 
+import com.megamind.StockManagerApi.category.CategoryService
 import jakarta.persistence.EntityNotFoundException
 import jakarta.validation.Valid
 import org.springframework.dao.DataIntegrityViolationException
@@ -17,11 +18,12 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.yaml.snakeyaml.nodes.NodeId
 
 // ProductController.kt
 @RestController
 @RequestMapping("/api/v1/products") // Convention: nom de la ressource au pluriel
-class ProductController(private val service: ProductService) {
+class ProductController(private val service: ProductService, private val categoryService: CategoryService) {
 
     // POST /api/v1/products
     @PostMapping
@@ -36,6 +38,13 @@ class ProductController(private val service: ProductService) {
         val products = service.findAll(pageable)
         return ResponseEntity.ok(products)
     }
+
+    @GetMapping("/all")
+    fun getAlll(pageable: Pageable): ResponseEntity<Page<ProductResponseDTO>> {
+        val products = service.findAll(pageable)
+        return ResponseEntity.ok(products)
+    }
+
 
     // GET /api/v1/products/{id}
     @GetMapping("/{id}")
@@ -104,4 +113,15 @@ class ProductController(private val service: ProductService) {
     fun searchByName(@RequestParam name: String, pageable: Pageable): ResponseEntity<Page<ProductResponseDTO>> {
         return ResponseEntity.ok(service.searchByName(name, pageable))
     }
+
+
+    @GetMapping("/category/{categoryId}")
+    fun getProductsByCategory(
+        @PathVariable categoryId: Long,
+        pageable: Pageable
+    ): Page<ProductResponseDTO> {
+        val category = categoryService.findById(categoryId)
+        return service.findByCategory(category, pageable)
+    }
 }
+

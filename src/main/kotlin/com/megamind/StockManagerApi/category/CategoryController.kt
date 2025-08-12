@@ -70,4 +70,22 @@ class CategoryController(private val service: CategoryService) {
 
     }
 
+
+    @GetMapping("/{id}")
+    fun findCategorybyid(@PathVariable id: Long): ResponseEntity<Category> {
+
+        return try {
+            val response = service.findById(id)
+            ResponseEntity.status(HttpStatus.OK).body(response)
+
+        } catch (e: EntityNotFoundException) {
+
+            ResponseEntity(HttpStatus.NOT_FOUND)
+        } catch (e: Exception) {
+
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+
+    }
+
 }

@@ -19,7 +19,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(Exception::class)
     fun handleGeneric(e: Exception): ResponseEntity<Map<String, String>> {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(mapOf("error" to "Erreur serveur."))
+            .body(mapOf("error" to "Erreur serveur. ${e.message}"))
     }
 
 
