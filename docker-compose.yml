@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_DATABASE: recensement_db
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: jospin
+      MYSQL_PASSWORD: lide@8452
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - recensement-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ,"-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mysql-db
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - recensement-network
+
+
+  springboot-app:
+    build: .
+    image: recensement:v1
+    container_name: api-recensement
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/recensement_db
+      SPRING_DATASOURCE_USERNAME: jospin
+      SPRING_DATASOURCE_PASSWORD: lide@8452
+    ports:
+      - "8080:8080"
+    networks:
+      - recensement-network
+
+volumes:
+  mysql_data:
+
+networks:
+  recensement-network:
