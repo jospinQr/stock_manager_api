@@ -4,18 +4,18 @@ services:
     image: mysql:8.0
     container_name: mysql-db
     environment:
-      MYSQL_DATABASE: recensement_db
+      MYSQL_DATABASE: stock_db
       MYSQL_ROOT_PASSWORD: root
       MYSQL_USER: jospin
-      MYSQL_PASSWORD: lide@8452
+      MYSQL_PASSWORD: joe@8452
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
-      - recensement-network
+      - stock_manager-network
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ,"-p${MYSQL_ROOT_PASSWORD}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ,"-p${MYSQL_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,26 +31,26 @@ services:
     depends_on:
       - mysql
     networks:
-      - recensement-network
+      - stock_manager-network
 
 
   springboot-app:
     build: .
-    image: recensement:v1
-    container_name: api-recensement
+    image: stock_manager:v1
+    container_name: api-stock
     depends_on:
       - mysql
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/recensement_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/stock_db
       SPRING_DATASOURCE_USERNAME: jospin
-      SPRING_DATASOURCE_PASSWORD: lide@8452
+      SPRING_DATASOURCE_PASSWORD: joe@8452
     ports:
       - "8080:8080"
     networks:
-      - recensement-network
+      - stock_manager-network
 
 volumes:
   mysql_data:
 
 networks:
-  recensement-network:
+  stock_manager-network:
