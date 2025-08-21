@@ -1,6 +1,7 @@
 package com.megamind.StockManagerApi.utlis
 
 import jakarta.persistence.EntityNotFoundException
+import org.apache.coyote.BadRequestException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -29,4 +30,13 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(mapOf("error" to "Entité non trouvé : ${e.message}"))
     }
+
+    @ExceptionHandler(BadRequestException::class)
+    fun handleBadRequest(e: BadRequestException): ResponseEntity<Map<String, String>> {
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(mapOf("error" to "Mauvaise requete: ${e.message}"))
+    }
+
+
 }

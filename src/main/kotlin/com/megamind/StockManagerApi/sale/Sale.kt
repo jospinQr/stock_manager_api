@@ -6,9 +6,13 @@ import com.megamind.StockManagerApi.user.User
 import jakarta.persistence.*
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.PastOrPresent
+import org.springframework.data.annotation.CreatedBy
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
+
 @Entity
+
 data class Sale(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,14 +30,11 @@ data class Sale(
 
     val items: MutableList<SaleItem> = mutableListOf(),
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
-    val createdBy: User,
+    val createdBy: String? = null,
 
     @field:NotNull
     @Enumerated(EnumType.STRING)
     val paymentStatus: PaymentStatus = PaymentStatus.PAID,
-
 
 
     )

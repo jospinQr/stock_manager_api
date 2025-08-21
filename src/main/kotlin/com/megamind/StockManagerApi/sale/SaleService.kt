@@ -5,13 +5,13 @@ import com.megamind.StockManagerApi.product.ProductRepository
 import com.megamind.StockManagerApi.stock_mouvement.MovementRequestDTO
 import com.megamind.StockManagerApi.stock_mouvement.MovementType
 import com.megamind.StockManagerApi.stock_mouvement.StockService
-import com.megamind.StockManagerApi.user.User
 import com.megamind.StockManagerApi.user.UserDTO
 import com.megamind.StockManagerApi.user.UserRepository
 import com.megamind.StockManagerApi.utlis.PaginatedResponse
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 
 import java.time.LocalDateTime
@@ -28,25 +28,24 @@ class SaleService(
     fun createSale(
         customerId: Long?,
         items: List<SaleItemRequestDTO>,
-        currentUsername: String
     ): SaleResponseDTO {
-        // Récupérer l'utilisateur courant
-        val user = userRepository.findByUsername(currentUsername).orElseThrow {
-            throw IllegalArgumentException("Utilisateur non trouvé")
-        }
 
         // Récupérer le client (optionnel)
         val customer = customerId?.let {
             customerRepository.findById(it).orElseThrow { IllegalArgumentException("Client non trouvé") }
         }
 
+        // Récupérer le user
+        val username = SecurityContextHolder.getContext().authentication.name
+
         // Créer la vente
         val sale = Sale(
             date = LocalDateTime.now(),
             customer = customer,
             paymentStatus = PaymentStatus.PAID,
-            createdBy = user
-        )
+            createdBy = username
+
+            )
 
 
         // Traiter les articles
@@ -63,9 +62,8 @@ class SaleService(
             stockService.createMovement(
                 MovementRequestDTO(
                     productId = product.id,
-                    userId = user.id,
                     quantity = dto.quantity,
-                    type = MovementType.SALE,
+                    type = MovementType.VENTE,
                     sourceDocument = "VENTE-${sale.id ?: "temp"}", // si ID pas encore défini
                     notes = "Mouvement généré automatiquement lors de la vente"
                 )
@@ -169,7 +167,7 @@ class SaleService(
         },
         totalAmount = this.items.sumOf { it.discount.toDouble() },
         paymentStatus = this.paymentStatus,
-        createdBy = UserDTO(id = this.createdBy.id, username = this.createdBy.username)
+        createdBy = this.createdBy
     )
 
 }

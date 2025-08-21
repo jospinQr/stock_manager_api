@@ -52,15 +52,17 @@ class InvoiceService {
 
 
     private fun addHeader(document: Document, sale: SaleResponseDTO) {
-        val logoPath = ClassPathResource("static/images/logo.png").file.absolutePath
-        val logo = Image.getInstance(logoPath)
+        val resource = ClassPathResource("static/images/logo.png")
+        resource.inputStream.use { input ->
+            val logo = Image.getInstance(input.readBytes())
+            logo.scaleAbsoluteWidth(100f)  // ~42mm de large
+            logo.scaleAbsoluteHeight(60f)
+            logo.alignment = Element.ALIGN_CENTER
+            document.add(logo)
+        }
 
-        // Adapter à l'imprimante thermique 80mm
-        logo.scaleAbsoluteWidth(100f)  // ~42mm de large
-        logo.scaleAbsoluteHeight(60f)
-        logo.alignment = Element.ALIGN_CENTER
 
-        document.add(logo)
+
 
         val companyInfo = Paragraph()
         companyInfo.alignment = Element.ALIGN_CENTER

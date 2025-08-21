@@ -32,8 +32,8 @@ class SaleController(private val saleService: SaleService, private val invoiceSe
         val createdSale = saleService.createSale(
             customerId = saleRequestDTO.customerId,
             items = saleRequestDTO.items,
-            currentUsername = principal.name // On utilise le nom de l'utilisateur authentifié
-        )
+
+            )
 
         // 2. Générer le PDF en utilisant le service de facturation
         val pdfBytes = invoiceService.generateInvoicePdf(createdSale)

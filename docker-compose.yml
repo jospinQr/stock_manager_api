@@ -1,8 +1,8 @@
-version: '3.8'
 services:
   mysql:
     image: mysql:8.0
     container_name: mysql-db
+    restart: always
     environment:
       MYSQL_DATABASE: stock_db
       MYSQL_ROOT_PASSWORD: root
@@ -24,6 +24,7 @@ services:
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin
+    restart: always
     environment:
       PMA_HOST: mysql-db
     ports:
@@ -37,7 +38,8 @@ services:
   springboot-app:
     build: .
     image: stock_manager:v1
-    container_name: api-stock
+    container_name: api-
+    restart: always
     depends_on:
       - mysql
     environment:

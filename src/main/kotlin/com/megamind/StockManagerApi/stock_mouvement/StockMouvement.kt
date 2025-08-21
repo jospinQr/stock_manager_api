@@ -4,7 +4,8 @@ package com.megamind.StockManagerApi.stock_mouvement
 import com.megamind.StockManagerApi.product.Product
 import com.megamind.StockManagerApi.user.User
 import jakarta.persistence.*
-import java.math.BigDecimal
+import org.springframework.data.annotation.CreatedBy
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
 @Entity
@@ -32,21 +33,23 @@ data class StockMovement(
     // Optionnel : lien vers un document (ex: "FACTURE-00123", "BC-456")
     val sourceDocument: String? = null,
 
-    //  utilisateur ayant effectué le mouvement
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    val user: User,
+
+    val createBy: String?=null,
 
     val notes: String? = null
 )
 
 // MovementType.kt
 enum class MovementType {
-    SUPPLY,          // Entrée de stock (approvisionnement fournisseur)
-    SALE,            // Sortie de stock (vente client)
-    CUSTOMER_RETURN, // Retour client (entrée de stock)
-    SUPPLIER_RETURN, // Retour fournisseur (sortie de stock)
-    INVENTORY_ADJUSTMENT_PLUS, // Ajustement d'inventaire positif
-    INVENTORY_ADJUSTMENT_MINUS,// Ajustement d'inventaire négatif
-    WASTAGE           // Perte / Casse (sortie de stock)
+
+
+    ENTREE,
+    SORTIE,// Entrée de stock (approvisionnement fournisseur)
+    VENTE,            // Sortie de stock (vente client)
+    ACHAT,
+    AJUSTEMENT_INVENTAIRE_PLUS, // Ajustement d'inventaire positif
+    AJUSTEMENT_INVENTAIRE_MOINS,// Ajustement d'inventaire négatif
+    PERT,
+    RETOUR_CLIENT
+
 }

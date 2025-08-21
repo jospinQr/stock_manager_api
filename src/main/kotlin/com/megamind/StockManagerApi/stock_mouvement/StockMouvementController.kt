@@ -41,6 +41,172 @@ class StockController(private val stockService: StockService) {
         return ResponseEntity.ok(response)
     }
 
+    /**
+     * Récupère une liste paginée des entrées de stock par période
+     * @param startDate Date de début de la période (format: yyyy-MM-ddTHH:mm:ss)
+     * @param endDate Date de fin de la période (format: yyyy-MM-ddTHH:mm:ss)
+     * @param pageSize Taille de la page (défaut: 20)
+     * @return Liste paginée des entrées de stock pour la période spécifiée
+     */
+    @GetMapping("/entries/period")
+    fun getStockEntriesByPeriod(
+        @RequestParam startDate: LocalDateTime,
+        @RequestParam endDate: LocalDateTime,
+        @RequestParam(defaultValue = "20") pageSize: Int
+    ): ResponseEntity<PeriodPaginatedResponse<StockMovementResponseDTO>> {
+        val entriesResponse = stockService.getStockEntriesByPeriod(startDate, endDate, pageSize)
+
+        val response = PeriodPaginatedResponse(
+            content = entriesResponse.content.map { it.toResponseDTO() },
+            totalElements = entriesResponse.totalElements,
+            totalPages = entriesResponse.totalPages,
+            currentPeriod = entriesResponse.currentPeriod,
+            startDate = entriesResponse.startDate,
+            endDate = entriesResponse.endDate,
+            pageSize = entriesResponse.pageSize,
+            hasNextPeriod = entriesResponse.hasNextPeriod,
+            hasPreviousPeriod = entriesResponse.hasPreviousPeriod
+        )
+
+        return ResponseEntity.ok(response)
+    }
+
+    /**
+     * Récupère une liste paginée des sorties de stock par période
+     * @param startDate Date de début de la période (format: yyyy-MM-ddTHH:mm:ss)
+     * @param endDate Date de fin de la période (format: yyyy-MM-ddTHH:mm:ss)
+     * @param pageSize Taille de la page (défaut: 20)
+     * @return Liste paginée des sorties de stock pour la période spécifiée
+     */
+    @GetMapping("/exits/period")
+    fun getStockExitsByPeriod(
+        @RequestParam startDate: LocalDateTime,
+        @RequestParam endDate: LocalDateTime,
+        @RequestParam(defaultValue = "20") pageSize: Int
+    ): ResponseEntity<PeriodPaginatedResponse<StockMovementResponseDTO>> {
+        val exitsResponse = stockService.getStockExitsByPeriod(startDate, endDate, pageSize)
+
+        val response = PeriodPaginatedResponse(
+            content = exitsResponse.content.map { it.toResponseDTO() },
+            totalElements = exitsResponse.totalElements,
+            totalPages = exitsResponse.totalPages,
+            currentPeriod = exitsResponse.currentPeriod,
+            startDate = exitsResponse.startDate,
+            endDate = exitsResponse.endDate,
+            pageSize = exitsResponse.pageSize,
+            hasNextPeriod = exitsResponse.hasNextPeriod,
+            hasPreviousPeriod = exitsResponse.hasPreviousPeriod
+        )
+
+        return ResponseEntity.ok(response)
+    }
+
+    /**
+     * Récupère les entrées de stock pour une période prédéfinie
+     * @param periodType Type de période (DAY, WEEK, MONTH)
+     * @param referenceDate Date de référence (optionnel, défaut: aujourd'hui)
+     * @param pageSize Taille de la page (défaut: 20)
+     * @return Liste paginée des entrées de stock pour la période
+     */
+    @GetMapping("/entries/{periodType}")
+    fun getStockEntriesByPeriodType(
+        @PathVariable periodType: String,
+        @RequestParam(required = false) referenceDate: LocalDateTime?,
+        @RequestParam(defaultValue = "20") pageSize: Int
+    ): ResponseEntity<PeriodPaginatedResponse<StockMovementResponseDTO>> {
+        val refDate = referenceDate ?: LocalDateTime.now()
+        val (startDate, endDate) = stockService.generatePeriod(periodType, refDate)
+
+        val entriesResponse = stockService.getStockEntriesByPeriod(startDate, endDate, pageSize)
+
+        val response = PeriodPaginatedResponse(
+            content = entriesResponse.content.map { it.toResponseDTO() },
+            totalElements = entriesResponse.totalElements,
+            totalPages = entriesResponse.totalPages,
+            currentPeriod = entriesResponse.currentPeriod,
+            startDate = entriesResponse.startDate,
+            endDate = entriesResponse.endDate,
+            pageSize = entriesResponse.pageSize,
+            hasNextPeriod = entriesResponse.hasNextPeriod,
+            hasPreviousPeriod = entriesResponse.hasPreviousPeriod
+        )
+
+        return ResponseEntity.ok(response)
+    }
+
+    /**
+     * Récupère les sorties de stock pour une période prédéfinie
+     * @param periodType Type de période (DAY, WEEK, MONTH)
+     * @param referenceDate Date de référence (optionnel, défaut: aujourd'hui)
+     * @param pageSize Taille de la page (défaut: 20)
+     * @return Liste paginée des sorties de stock pour la période
+     */
+    @GetMapping("/exits/{periodType}")
+    fun getStockExitsByPeriodType(
+        @PathVariable periodType: String,
+        @RequestParam(required = false) referenceDate: LocalDateTime?,
+        @RequestParam(defaultValue = "20") pageSize: Int
+    ): ResponseEntity<PeriodPaginatedResponse<StockMovementResponseDTO>> {
+        val refDate = referenceDate ?: LocalDateTime.now()
+        val (startDate, endDate) = stockService.generatePeriod(periodType, refDate)
+
+        val exitsResponse = stockService.getStockExitsByPeriod(startDate, endDate, pageSize)
+
+        val response = PeriodPaginatedResponse(
+            content = exitsResponse.content.map { it.toResponseDTO() },
+            totalElements = exitsResponse.totalElements,
+            totalPages = exitsResponse.totalPages,
+            currentPeriod = exitsResponse.currentPeriod,
+            startDate = exitsResponse.startDate,
+            endDate = exitsResponse.endDate,
+            pageSize = exitsResponse.pageSize,
+            hasNextPeriod = exitsResponse.hasNextPeriod,
+            hasPreviousPeriod = exitsResponse.hasPreviousPeriod
+        )
+
+        return ResponseEntity.ok(response)
+    }
+
+    /**
+     * Récupère la période suivante pour la navigation
+     * @param startDate Date de début de la période actuelle
+     * @param endDate Date de fin de la période actuelle
+     * @return Période suivante
+     */
+    @GetMapping("/period/next")
+    fun getNextPeriod(
+        @RequestParam startDate: LocalDateTime,
+        @RequestParam endDate: LocalDateTime
+    ): ResponseEntity<Map<String, LocalDateTime>> {
+        val (nextStart, nextEnd) = stockService.getNextPeriod(startDate, endDate)
+        return ResponseEntity.ok(
+            mapOf(
+                "startDate" to nextStart,
+                "endDate" to nextEnd
+            )
+        )
+    }
+
+    /**
+     * Récupère la période précédente pour la navigation
+     * @param startDate Date de début de la période actuelle
+     * @param endDate Date de fin de la période actuelle
+     * @return Période précédente
+     */
+    @GetMapping("/period/previous")
+    fun getPreviousPeriod(
+        @RequestParam startDate: LocalDateTime,
+        @RequestParam endDate: LocalDateTime
+    ): ResponseEntity<Map<String, LocalDateTime>> {
+        val (prevStart, prevEnd) = stockService.getPreviousPeriod(startDate, endDate)
+        return ResponseEntity.ok(
+            mapOf(
+                "startDate" to prevStart,
+                "endDate" to prevEnd
+            )
+        )
+    }
+
 
     @GetMapping("products/{id}/stock-card")
     fun getStockCard(
@@ -80,7 +246,7 @@ class StockController(private val stockService: StockService) {
             movementDate = this.movementDate,
             sourceDocument = this.sourceDocument,
             notes = this.notes,
-            userName = this.user.username
+            createBy = this.createBy
         )
     }
 

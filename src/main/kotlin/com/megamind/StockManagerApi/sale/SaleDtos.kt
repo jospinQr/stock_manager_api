@@ -28,7 +28,7 @@ data class SaleResponseDTO(
     val items: List<SaleItemDTO>,
     val totalAmount: Double,
     val paymentStatus: PaymentStatus,
-    val createdBy: UserDTO
+    val createdBy: String?=null
 )
 
 data class SaleItemDTO(

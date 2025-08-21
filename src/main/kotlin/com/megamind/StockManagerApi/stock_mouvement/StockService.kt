@@ -10,16 +10,17 @@ import com.itextpdf.text.Image
 import com.itextpdf.text.PageSize
 import com.itextpdf.text.Paragraph
 import com.itextpdf.text.Phrase
-import com.itextpdf.text.pdf.PdfDocument
 import com.itextpdf.text.pdf.PdfPCell
 import com.itextpdf.text.pdf.PdfPTable
 import com.itextpdf.text.pdf.PdfWriter
 import com.megamind.StockManagerApi.product.ProductRepository
-import com.megamind.StockManagerApi.sale.SaleResponseDTO
 import com.megamind.StockManagerApi.user.UserRepository
 import jakarta.persistence.EntityNotFoundException
 import jakarta.transaction.Transactional
 import org.springframework.core.io.ClassPathResource
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import java.io.ByteArrayOutputStream
 import java.time.LocalDateTime
@@ -31,31 +32,27 @@ import kotlin.math.abs
 class StockService(
     private val movementRepository: StockMovementRepository,
     private val productRepository: ProductRepository,
-    private val userRepository: UserRepository
-    // On en a besoin pour mettre à jour la quantité
-) {
+
+    ) {
 
     @Transactional // ESSENTIEL ! Garantit que les deux opérations (créer mouvement + update produit) réussissent ou échouent ensemble.
     fun createMovement(request: MovementRequestDTO): StockMovement {
         val product = productRepository.findById(request.productId)
             .orElseThrow { EntityNotFoundException("Product with id ${request.productId} not found.") }
 
-        println("Produit trouvé : ${product.name}")
+        val username = SecurityContextHolder.getContext().authentication.name
 
-        val user = userRepository.findById(request.userId)
-            .orElseThrow { EntityNotFoundException("User with id ${request.userId} not found.") }
-
-        println("Utilisateur trouvé : ${user.username}")
-        // Déterminer la quantité à appliquer (positive ou négative)
+        // Détermine la quantité à appliquer (positive ou négative)
         val quantityToApply = when (request.type) {
-            MovementType.SALE,
-            MovementType.SUPPLIER_RETURN,
-            MovementType.INVENTORY_ADJUSTMENT_MINUS,
-            MovementType.WASTAGE -> -abs(request.quantity)
+            MovementType.VENTE,
+            MovementType.SORTIE,
+            MovementType.AJUSTEMENT_INVENTAIRE_MOINS,
+            MovementType.PERT -> -abs(request.quantity)
 
-            MovementType.SUPPLY,
-            MovementType.CUSTOMER_RETURN,
-            MovementType.INVENTORY_ADJUSTMENT_PLUS -> abs(request.quantity)
+            MovementType.ENTREE,
+            MovementType.RETOUR_CLIENT,
+            MovementType.ACHAT,
+            MovementType.AJUSTEMENT_INVENTAIRE_PLUS -> abs(request.quantity)
         }
 
         // Vérification du stock pour les sorties
@@ -74,7 +71,8 @@ class StockService(
             type = request.type,
             sourceDocument = request.sourceDocument,
             notes = request.notes,
-            user = user
+            createBy = username
+
         )
         val savedMovement = movementRepository.save(movement)
         print("Mouvement reussi")
@@ -118,7 +116,7 @@ class StockService(
                     stockAfter = currentStock,
                     sourceDocument = movement.sourceDocument,
                     notes = movement.notes,
-                    user = movement.user
+                    createBy = movement.createBy
                 )
             )
         }
@@ -181,15 +179,17 @@ class StockService(
         for (m in movements) {
             val type = when (m.type) {
 
-                MovementType.SALE,
-                MovementType.SUPPLIER_RETURN,
-                MovementType.INVENTORY_ADJUSTMENT_MINUS,
-                MovementType.WASTAGE -> "Sortie"
+                MovementType.VENTE,
+                MovementType.SORTIE,
+                MovementType.AJUSTEMENT_INVENTAIRE_MOINS,
+                MovementType.PERT -> "Sortie"
 
 
-                MovementType.SUPPLY,
-                MovementType.CUSTOMER_RETURN,
-                MovementType.INVENTORY_ADJUSTMENT_PLUS -> "Entrée"
+                MovementType.ACHAT,
+                MovementType.ENTREE,
+                MovementType.RETOUR_CLIENT,
+                MovementType.AJUSTEMENT_INVENTAIRE_PLUS -> "Entrée"
+
             }
             table.addCell(Phrase(m.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), normalFont))
             table.addCell(Phrase(m.type.name, normalFont))
@@ -198,7 +198,7 @@ class StockService(
             table.addCell(Phrase(m.stockAfter.toString(), normalFont))
             table.addCell(Phrase(m.sourceDocument ?: "", normalFont))
             table.addCell(Phrase(m.notes ?: "", normalFont))
-            table.addCell(Phrase(m.user.username, normalFont))
+            table.addCell(Phrase(m.createBy ?: "", normalFont))
         }
 
         document.add(table)
@@ -208,20 +208,197 @@ class StockService(
         return outputStream.toByteArray()
     }
 
+    /**
+     * Récupère une liste paginée des entrées de stock par période
+     * @param startDate Date de début de la période
+     * @param endDate Date de fin de la période
+     * @param pageSize Taille de la page
+     * @return Réponse paginée par période des mouvements d'entrée
+     */
+    fun getStockEntriesByPeriod(
+        startDate: LocalDateTime,
+        endDate: LocalDateTime,
+        pageSize: Int = 20
+    ): PeriodPaginatedResponse<StockMovement> {
+        val entryTypes = listOf(
+            MovementType.ENTREE,
+            MovementType.ACHAT,
+            MovementType.RETOUR_CLIENT,
+            MovementType.AJUSTEMENT_INVENTAIRE_PLUS
+        )
+
+        val pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "movementDate"))
+        val entriesPage = movementRepository.findByTypeInAndMovementDateBetweenOrderByMovementDateDesc(
+            entryTypes, startDate, endDate, pageable
+        )
+
+        val totalElements = movementRepository.countByTypeInAndMovementDateBetween(entryTypes, startDate, endDate)
+        val totalPages = (totalElements / pageSize).toInt() + if (totalElements % pageSize > 0) 1 else 0
+
+        return PeriodPaginatedResponse(
+            content = entriesPage.content,
+            totalElements = totalElements,
+            totalPages = totalPages,
+            currentPeriod = formatPeriod(startDate, endDate),
+            startDate = startDate,
+            endDate = endDate,
+            pageSize = pageSize,
+            hasNextPeriod = hasNextPeriod(startDate, endDate, totalElements, pageSize),
+            hasPreviousPeriod = hasPreviousPeriod(startDate, endDate)
+        )
+    }
+
+    /**
+     * Récupère une liste paginée des sorties de stock par période
+     * @param startDate Date de début de la période
+     * @param endDate Date de fin de la période
+     * @param pageSize Taille de la page
+     * @return Réponse paginée par période des mouvements de sortie
+     */
+    fun getStockExitsByPeriod(
+        startDate: LocalDateTime,
+        endDate: LocalDateTime,
+        pageSize: Int = 20
+    ): PeriodPaginatedResponse<StockMovement> {
+        val exitTypes = listOf(
+            MovementType.SORTIE,
+            MovementType.VENTE,
+            MovementType.AJUSTEMENT_INVENTAIRE_MOINS,
+            MovementType.PERT
+        )
+
+        val pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "movementDate"))
+        val exitsPage = movementRepository.findByTypeInAndMovementDateBetweenOrderByMovementDateDesc(
+            exitTypes, startDate, endDate, pageable
+        )
+
+        val totalElements = movementRepository.countByTypeInAndMovementDateBetween(exitTypes, startDate, endDate)
+        val totalPages = (totalElements / pageSize).toInt() + if (totalElements % pageSize > 0) 1 else 0
+
+        return PeriodPaginatedResponse(
+            content = exitsPage.content,
+            totalElements = totalElements,
+            totalPages = totalPages,
+            currentPeriod = formatPeriod(startDate, endDate),
+            startDate = startDate,
+            endDate = endDate,
+            pageSize = pageSize,
+            hasNextPeriod = hasNextPeriod(startDate, endDate, totalElements, pageSize),
+            hasPreviousPeriod = hasPreviousPeriod(startDate, endDate)
+        )
+    }
+
+    /**
+     * Récupère la période suivante pour la pagination
+     * @param currentStartDate Date de début de la période actuelle
+     * @param currentEndDate Date de fin de la période actuelle
+     * @return Période suivante
+     */
+    fun getNextPeriod(
+        currentStartDate: LocalDateTime,
+        currentEndDate: LocalDateTime
+    ): Pair<LocalDateTime, LocalDateTime> {
+        val duration = java.time.Duration.between(currentStartDate, currentEndDate)
+        val nextStartDate = currentEndDate.plusNanos(1)
+        val nextEndDate = nextStartDate.plus(duration)
+        return Pair(nextStartDate, nextEndDate)
+    }
+
+    /**
+     * Récupère la période précédente pour la pagination
+     * @param currentStartDate Date de début de la période actuelle
+     * @param currentEndDate Date de fin de la période actuelle
+     * @return Période précédente
+     */
+    fun getPreviousPeriod(
+        currentStartDate: LocalDateTime,
+        currentEndDate: LocalDateTime
+    ): Pair<LocalDateTime, LocalDateTime> {
+        val duration = java.time.Duration.between(currentStartDate, currentEndDate)
+        val previousEndDate = currentStartDate.minusNanos(1)
+        val previousStartDate = previousEndDate.minus(duration)
+        return Pair(previousStartDate, previousEndDate)
+    }
+
+    /**
+     * Génère des périodes prédéfinies (jour, semaine, mois)
+     * @param periodType Type de période
+     * @param referenceDate Date de référence
+     * @return Période calculée
+     */
+    fun generatePeriod(
+        periodType: String,
+        referenceDate: LocalDateTime = LocalDateTime.now()
+    ): Pair<LocalDateTime, LocalDateTime> {
+        return when (periodType.uppercase()) {
+            "DAY" -> {
+                val startOfDay = referenceDate.toLocalDate().atStartOfDay()
+                val endOfDay = startOfDay.plusDays(1).minusNanos(1)
+                Pair(startOfDay, endOfDay)
+            }
+
+            "WEEK" -> {
+                val startOfWeek = referenceDate.toLocalDate()
+                    .with(java.time.DayOfWeek.MONDAY)
+                    .atStartOfDay()
+                val endOfWeek = startOfWeek.plusWeeks(1).minusNanos(1)
+                Pair(startOfWeek, endOfWeek)
+            }
+
+            "MONTH" -> {
+                val startOfMonth = referenceDate.toLocalDate()
+                    .withDayOfMonth(1)
+                    .atStartOfDay()
+                val endOfMonth = startOfMonth.plusMonths(1).minusNanos(1)
+                Pair(startOfMonth, endOfMonth)
+            }
+
+            else -> {
+                // Par défaut, période d'un jour
+                val startOfDay = referenceDate.toLocalDate().atStartOfDay()
+                val endOfDay = startOfDay.plusDays(1).minusNanos(1)
+                Pair(startOfDay, endOfDay)
+            }
+        }
+    }
+
+    // Méthodes utilitaires privées
+    private fun formatPeriod(startDate: LocalDateTime, endDate: LocalDateTime): String {
+        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+        return "${startDate.format(formatter)} - ${endDate.format(formatter)}"
+    }
+
+    private fun hasNextPeriod(
+        startDate: LocalDateTime,
+        endDate: LocalDateTime,
+        totalElements: Long,
+        pageSize: Int
+    ): Boolean {
+        return totalElements > pageSize
+    }
+
+    private fun hasPreviousPeriod(startDate: LocalDateTime, endDate: LocalDateTime): Boolean {
+        // On considère qu'il y a une période précédente si on n'est pas à la date actuelle
+        val now = LocalDateTime.now()
+        return endDate.isBefore(now)
+    }
 
     private fun addHeader(document: Document) {
-        val logoPath = ClassPathResource("static/images/logo.png").file.absolutePath
-        val logo = Image.getInstance(logoPath)
+
+        val resource = ClassPathResource("static/images/logo.png")
+        resource.inputStream.use { input ->
+            val logo = Image.getInstance(input.readBytes())
+            logo.scaleAbsoluteWidth(100f)  // ~42mm de large
+            logo.scaleAbsoluteHeight(60f)
+            logo.alignment = Element.ALIGN_CENTER
+            document.add(logo)
+        }
+
         val FONT_TITLE = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18f, BaseColor.BLACK)
         val FONT_BOLD = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10f, BaseColor.BLACK)
         val FONT_NORMAL = FontFactory.getFont(FontFactory.HELVETICA, 10f, BaseColor.BLACK)
         val FONT_TABLE_HEADER = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10f, BaseColor.WHITE)
-        // Adapter à l'imprimante thermique 80mm
-        logo.scaleAbsoluteWidth(120f)  // ~42mm de large
-        logo.scaleAbsoluteHeight(120f)
-        logo.alignment = Element.ALIGN_LEFT
 
-        document.add(logo)
 
         val companyInfo = Paragraph()
         companyInfo.alignment = Element.ALIGN_LEFT
