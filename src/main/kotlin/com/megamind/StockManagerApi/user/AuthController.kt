@@ -31,13 +31,11 @@ class AuthController(
             username = request.username,
             password = passwordEncoder.encode(request.password),
             role = request.role,
-
-
-            )
+        )
 
         userRepository.save(user)
 
-        val token = jwtService.generateToken(user.username)
+        val token = jwtService.generateToken(user.username, user.role)
         return ResponseEntity.ok(AuthResponse(token))
     }
 
@@ -50,15 +48,8 @@ class AuthController(
             return ResponseEntity.badRequest().body(AuthResponse("Nom ou mot de passe incorrect"))
         }
 
-        // Vérification du rôle
-        if (user.role != request.role) {
-            return ResponseEntity.badRequest().body(AuthResponse("Rôle incorrect"))
-        }
 
-        // Si l'utilisateur n'est pas Admin, on vérifie province et entité
-
-
-        val token = jwtService.generateToken(user.username)
+        val token = jwtService.generateToken(user.username, user.role)
         return ResponseEntity.ok(AuthResponse(token))
     }
 }
@@ -73,7 +64,6 @@ data class RegisterRequest(
 data class LoginRequest(
     val username: String,
     val password: String,
-    val role: Role,
 
     )
 

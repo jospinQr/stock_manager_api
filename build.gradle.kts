@@ -40,7 +40,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("com.itextpdf:itextpdf:5.5.13.4")
 
-    implementation("com.itextpdf:itextpdf:5.5.13.4")
+
 
 }
 
