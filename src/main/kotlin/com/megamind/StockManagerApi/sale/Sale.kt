@@ -27,7 +27,6 @@ data class Sale(
     val customer: Customer? = null,
 
     @OneToMany(mappedBy = "sale", cascade = [CascadeType.ALL], orphanRemoval = true)
-
     val items: MutableList<SaleItem> = mutableListOf(),
 
     val createdBy: String? = null,

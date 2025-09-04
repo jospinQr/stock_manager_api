@@ -10,6 +10,7 @@ import com.megamind.StockManagerApi.user.UserRepository
 import com.megamind.StockManagerApi.utlis.PaginatedResponse
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
@@ -45,7 +46,7 @@ class SaleService(
             paymentStatus = PaymentStatus.PAID,
             createdBy = username
 
-            )
+        )
 
 
         // Traiter les articles
@@ -151,6 +152,12 @@ class SaleService(
 
 
         )
+    }
+
+    fun getTop10Products(): List<TopSaleProductDto> {
+        val pageable = PageRequest.of(0, 10)
+        return saleRepository.findTopSellingProducts(pageable)
+
     }
 
     private fun Sale.toResponseDTO() = SaleResponseDTO(

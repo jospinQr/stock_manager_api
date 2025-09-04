@@ -139,4 +139,11 @@ class SaleController(private val saleService: SaleService, private val invoiceSe
 
         return ResponseEntity(pdfBytes, headers, HttpStatus.OK)
     }
+
+
+    @GetMapping("/topProduct")
+    fun getTop10Product(): ResponseEntity<List<TopSaleProductDto>> {
+        val response = saleService.getTop10Products()
+        return ResponseEntity.ok(response)
+    }
 }

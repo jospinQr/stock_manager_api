@@ -41,6 +41,9 @@ dependencies {
     implementation("com.itextpdf:itextpdf:5.5.13.4")
 
 
+    implementation("org.springframework.ai:spring-ai-starter-model-deepseek")
+
+
 
 }
 
@@ -59,3 +62,12 @@ allOpen {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+extra["springAiVersion"] = "1.0.1"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
